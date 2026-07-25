@@ -1,0 +1,98 @@
+name: SAP CPI Validation
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      ############################################################
+      # 1. Validate Branch Naming
+      ############################################################
+      - name: Validate Feature Branch Naming
+        run: |
+          if ! echo "${{ github.ref_name }}" | grep -E '^feature/'; then
+            echo "ERROR: Branch must start with feature/"
+            exit 1
+          fi
+
+      ############################################################
+      # 2. Check for Hardcoded Passwords / Secrets
+      ############################################################
+      - name: Check for Hardcoded Passwords
+        run: |
+          if grep -R -i -E '(password=|pwd=|secret=|clientsecret=)' . ; then
+            echo "ERROR: Hardcoded password/secret detected"
+            exit 1
+          fi
+
+      ############################################################
+      # 3. Check for Hardcoded Production URLs
+      ############################################################
+      - name: Check for Hardcoded URLs
+        run: |
+          if grep -R -i -E '(http://|https://)' . ; then
+            echo "ERROR: Hardcoded URL detected. Use externalized parameters."
+            exit 1
+          fi
+
+      ############################################################
+      # 4. Check for Private Keys
+      ############################################################
+      - name: Check for Private Keys
+        run: |
+          if grep -R -i 'BEGIN PRIVATE KEY' . ; then
+            echo "ERROR: Private key detected"
+            exit 1
+          fi
+
+      ############################################################
+      # 5. Validate iFlow Naming Convention
+      #
+      # Expected:
+      # IFLOW_Customer_Order.iflw
+      # IFLOW_Salesforce_Sync.iflw
+      ############################################################
+      - name: Validate iFlow Naming
+        run: |
+
+          IFS=$'\n'
+
+          for file in $(find . -name "*.iflw")
+          do
+
+            filename=$(basename "$file" .iflw)
+
+            if ! echo "$filename" | grep -E '^IFLOW_' ; then
+                echo "ERROR: Invalid iFlow name -> $filename"
+                echo "iFlow names must start with IFLOW_"
+                exit 1
+            fi
+
+          done
+
+      ############################################################
+      # 6. Validate Externalized Parameters File Exists
+      ############################################################
+      - name: Validate Externalized Parameters
+        run: |
+
+          if [ ! -f config/externalized-parameters.properties ]; then
+             echo "ERROR: Missing externalized parameters file"
+             exit 1
+          fi
+
+      ############################################################
+      # SUCCESS
+      ############################################################
+      - name: Validation Passed
+        run: |
+          echo "SAP CPI validation passed"
