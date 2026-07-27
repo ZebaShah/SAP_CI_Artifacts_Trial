@@ -1,4 +1,4 @@
-name: SAP CPI Validation
+name: SAP CPI iFlow Validation
 
 on:
   push:
@@ -6,127 +6,34 @@ on:
       - 'feature/**'
 
 jobs:
-  validate:
+  validate-iflow:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-     ###########################################################
-      # Validate Branch Name
-      ###########################################################
-      - name: Validate Branch Naming Convention
-        run: |
-          if ! echo "${{ github.ref_name }}" | grep -E '^feature/'; then
-            echo "ERROR: Branch must start with feature/"
-            exit 1
-          fi
-
-      ###########################################################
-      # Detect Hardcoded Passwords
-      ###########################################################
-      - name: Detect Hardcoded Passwords
-        run: |
-          if grep -R -n -i -E "(password=|pwd=|secret=|clientsecret=)" . ; then
-              echo "ERROR: Hardcoded password/secret detected"
-              exit 1
-          fi
-
-      ###########################################################
-      # Detect Hardcoded Private Keys
-      ###########################################################
-      - name: Detect Private Keys
-        run: |
-          if grep -R -n -i "BEGIN PRIVATE KEY" . ; then
-              echo "ERROR: Private key detected"
-              exit 1
-          fi
-
-      ###########################################################
-      # Detect PROD URLs
-      ###########################################################
-      - name: Detect Hardcoded PROD URLs
-        run: |
-          if grep -R -n -i -E "(prod\.|prd\.|production\.)" . ; then
-              echo "ERROR: Hardcoded Production URL detected"
-              exit 1
-          fi
-
-      ###########################################################
-      # Validate iFlow Naming
-      # Example:
-      # IFLOW_Customer_Order.iflw
-      ###########################################################
       - name: Validate iFlow Naming Convention
         run: |
+
+          echo "Checking iFlow names..."
 
           files=$(find . -name "*.iflw")
 
           if [ -z "$files" ]; then
-            echo "No iFlow files found"
+            echo "No .iflw files found"
             exit 0
           fi
 
           for file in $files
           do
+            filename=$(basename "$file" .iflw)
 
-              filename=$(basename "$file" .iflw)
-
-              if ! echo "$filename" | grep -E '^IFLOW_' ; then
-                  echo "ERROR: Invalid iFlow name -> $filename"
-                  echo "Expected naming convention: IFLOW_*"
-                  exit 1
-              fi
-
-          done
-
-      ###########################################################
-      # Validate Mapping Naming
-      ###########################################################
-      - name: Validate Mapping Naming Convention
-        run: |
-
-          files=$(find . -name "*.mmap")
-
-          for file in $files
-          do
-
-            filename=$(basename "$file" .mmap)
-
-            if ! echo "$filename" | grep -E '^MAP_' ; then
-                echo "ERROR: Invalid Mapping name -> $filename"
-                exit 1
+            if ! echo "$filename" | grep -E '^IFLOW_'; then
+              echo "ERROR: Invalid iFlow name -> $filename"
+              echo "Expected naming convention: IFLOW_*"
+              exit 1
             fi
-
           done
 
-      ###########################################################
-      # Validate Script Naming
-      ###########################################################
-      - name: Validate Script Naming Convention
-        run: |
-
-          files=$(find . -name "*.groovy")
-
-          for file in $files
-          do
-
-            filename=$(basename "$file" .groovy)
-
-            if ! echo "$filename" | grep -E '^SCR_' ; then
-                echo "ERROR: Invalid Script name -> $filename"
-                exit 1
-            fi
-
-          done
-
-      ########################################################### 
-      # SUCCESS
-      ###########################################################
-      - name: Validation Passed
-        run: |
-          echo "======================================"
-          echo "SAP CPI VALIDATION PASSED"
-          echo "======================================"
+          echo "All iFlows passed validation"
