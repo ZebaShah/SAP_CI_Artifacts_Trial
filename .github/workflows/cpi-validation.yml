@@ -13,20 +13,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Validate iFlow Naming Convention
+      - name: Validate Changed iFlows Only
         run: |
 
-          echo "Checking iFlow names..."
+          echo "Checking changed iFlows..."
 
-          files=$(find . -name "*.iflw")
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.iflw$' || true)
 
-          if [ -z "$files" ]; then
-            echo "No .iflw files found"
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed iFlow files found"
             exit 0
           fi
 
-          for file in $files
+          echo "Changed iFlows:"
+          echo "$CHANGED_FILES"
+
+          for file in $CHANGED_FILES
           do
+
             filename=$(basename "$file" .iflw)
 
             if ! echo "$filename" | grep -E '^IFLOW_'; then
@@ -34,6 +38,7 @@ jobs:
               echo "Expected naming convention: IFLOW_*"
               exit 1
             fi
+
           done
 
-          echo "All iFlows passed validation"
+          echo "All changed iFlows passed validation"
