@@ -1,8 +1,8 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: myfirst_iflow
-Bundle-SymbolicName: myfirst_iflow; singleton:=true
-Bundle-Version: 1.0.2
+Bundle-Name: testing_iflow_Validation
+Bundle-SymbolicName: testing_iflow_Validation; singleton:=true
+Bundle-Version: 1.0.0
 SAP-BundleType: IntegrationFlow
 SAP-NodeType: IFLMAP
 SAP-RuntimeProfile: iflmap
@@ -28,6 +28,6 @@ Import-Package: com.sap.esb.application.services.cxf.interceptor,com.sap
  el.spi,com.sap.esb.webservice.audit.log,com.sap.esb.camel.endpoint.conf
  igurator.api,com.sap.esb.camel.jdbc.idempotency.reorg,javax.sql,org.apa
  che.camel.processor.idempotent.jdbc,org.osgi.service.blueprint
-Origin-Bundle-Name: myfirst_iflow
-Origin-Bundle-SymbolicName: myfirst_iflow
+Origin-Bundle-Name: testing_iflow_Validation
+Origin-Bundle-SymbolicName: testing_iflow_Validation
 
