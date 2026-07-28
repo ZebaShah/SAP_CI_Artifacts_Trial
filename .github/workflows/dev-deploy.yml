@@ -13,26 +13,25 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-      - name: Deployment Started
+      - name: Find Changed iFlows
         run: |
-          echo "=============================="
-          echo "DEV deployment workflow started"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "=============================="
 
-      - name: List Changed iFlows
-        run: |
-          find . -name "*.iflw"
+          echo "================================"
+          echo "Changed iFlows in this deployment"
+          echo "================================"
 
-      - name: Simulate SAP Deployment
-        run: |
-          echo "Deploying artifacts to SAP DEV"
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.iflw$' || true)
 
-      - name: Smoke Test
-        run: |
-          echo "Running smoke tests"
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No iFlows changed"
+            exit 0
+          fi
 
-      - name: Deployment Success
+          echo "$CHANGED_FILES"
+
+      - name: Simulate Deployment
         run: |
-          echo "DEV deployment completed"
+          echo "Deploying changed artifacts..."
