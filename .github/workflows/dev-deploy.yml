@@ -1,0 +1,38 @@
+name: DEV Deployment
+
+on:
+  push:
+    branches:
+      - DEV
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Deployment Started
+        run: |
+          echo "=============================="
+          echo "DEV deployment workflow started"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "=============================="
+
+      - name: List Changed iFlows
+        run: |
+          find . -name "*.iflw"
+
+      - name: Simulate SAP Deployment
+        run: |
+          echo "Deploying artifacts to SAP DEV"
+
+      - name: Smoke Test
+        run: |
+          echo "Running smoke tests"
+
+      - name: Deployment Success
+        run: |
+          echo "DEV deployment completed"
