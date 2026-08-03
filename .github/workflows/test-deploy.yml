@@ -1,0 +1,17 @@
+name: Test Deploy Trigger
+
+on:
+  push:
+    branches:
+      - DEV
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show changed files
+        run: |
+          git diff --name-only HEAD~1 HEAD
