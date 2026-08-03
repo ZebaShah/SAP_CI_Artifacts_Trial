@@ -33,31 +33,17 @@ jobs:
 
       - name: Check Secrets Exist
         run: |
-          if [ -n "${{ secrets.CLIENT_ID }}" ]; then
-            echo "CLIENT_ID OK"
-          else
-            echo "CLIENT_ID MISSING"
-          fi
-
-          if [ -n "${{ secrets.CLIENT_SECRET }}" ]; then
-            echo "CLIENT_SECRET OK"
-          else
-            echo "CLIENT_SECRET MISSING"
-          fi
-
-          if [ -n "${{ secrets.TOKEN_URL }}" ]; then
-            echo "TOKEN_URL OK"
-          else
-            echo "TOKEN_URL MISSING"
-          fi
+          [ -n "${{ secrets.CLIENT_ID }}" ] && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
+          [ -n "${{ secrets.CLIENT_SECRET }}" ] && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
+          [ -n "${{ secrets.TOKEN_URL }}" ] && echo "TOKEN_URL OK" || echo "TOKEN_URL MISSING"
 
       - name: Get SAP Access Token
         run: |
-          response=$(curl -s --request POST "${{ secrets.TOKEN_URL }}" \
-            --header "Content-Type: application/x-www-form-urlencoded" \
-            --data-urlencode "grant_type=client_credentials" \
-            --data-urlencode "client_id=${{ secrets.CLIENT_ID }}" \
-            --data-urlencode "client_secret=${{ secrets.CLIENT_SECRET }}")
+          response=$(curl -s \
+            -X POST "${{ secrets.TOKEN_URL }}" \
+            -u "${{ secrets.CLIENT_ID }}:${{ secrets.CLIENT_SECRET }}" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "grant_type=client_credentials")
 
           echo "$response"
 
@@ -65,7 +51,7 @@ jobs:
             echo "SUCCESS - SAP token received"
           else
             echo "FAILED - Unable to get SAP token"
-            exit 1 
+            exit 1
           fi
 
       - name: Simulate Deployment
