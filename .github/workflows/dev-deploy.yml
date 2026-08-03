@@ -11,16 +11,19 @@ jobs:
 
     steps:
 
-      - name: Check Secrets Exist
+      - name: Check Secret Lengths
         run: |
-          [ -n "${{ secrets.CLIENT_ID }}" ] && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
-          [ -n "${{ secrets.CLIENT_SECRET }}" ] && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
-          [ -n "${{ secrets.TOKEN_URL }}" ] && echo "TOKEN_URL OK" || echo "TOKEN_URL MISSING"
+          echo "CLIENT_ID length: $(printf '%s' '${{ secrets.CLIENT_ID }}' | wc -c)"
+          echo "CLIENT_SECRET length: $(printf '%s' '${{ secrets.CLIENT_SECRET }}' | wc -c)"
+          echo "TOKEN_URL length: $(printf '%s' '${{ secrets.TOKEN_URL }}' | wc -c)"
 
-      - name: Check URL Format
+      - name: Check For Hidden Characters
         run: |
-          echo "URL Length: $(echo -n '${{ secrets.TOKEN_URL }}' | wc -c)"
-          echo "URL Start:"
-          echo "${{ secrets.TOKEN_URL }}" | cut -c1-30
-          echo "URL End:"
-          echo "${{ secrets.TOKEN_URL }}" | rev | cut -c1-20 | rev
+          echo "CLIENT_ID"
+          printf '%s' '${{ secrets.CLIENT_ID }}' | od -An -tx1 | tail -1
+
+          echo "CLIENT_SECRET"
+          printf '%s' '${{ secrets.CLIENT_SECRET }}' | od -An -tx1 | tail -1
+
+          echo "TOKEN_URL"
+          printf '%s' '${{ secrets.TOKEN_URL }}' | od -An -tx1 | tail -1
