@@ -11,19 +11,16 @@ jobs:
 
     steps:
 
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
       - name: Check Secrets Exist
         run: |
           [ -n "${{ secrets.CLIENT_ID }}" ] && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
           [ -n "${{ secrets.CLIENT_SECRET }}" ] && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
           [ -n "${{ secrets.TOKEN_URL }}" ] && echo "TOKEN_URL OK" || echo "TOKEN_URL MISSING"
 
-      - name: Check Secret Lengths
+      - name: Check URL Format
         run: |
-          echo "CLIENT_ID length: $(echo -n '${{ secrets.CLIENT_ID }}' | wc -c)"
-          echo "CLIENT_SECRET length: $(echo -n '${{ secrets.CLIENT_SECRET }}' | wc -c)"
-          echo "TOKEN_URL length: $(echo -n '${{ secrets.TOKEN_URL }}' | wc -c)"
+          echo "URL Length: $(echo -n '${{ secrets.TOKEN_URL }}' | wc -c)"
+          echo "URL Start:"
+          echo "${{ secrets.TOKEN_URL }}" | cut -c1-30
+          echo "URL End:"
+          echo "${{ secrets.TOKEN_URL }}" | rev | cut -c1-20 | rev
