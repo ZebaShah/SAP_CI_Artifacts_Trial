@@ -16,44 +16,14 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Find Changed iFlows
-        run: |
-          echo "================================"
-          echo "Changed iFlows in this deployment"
-          echo "================================"
-
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.iflw$' || true)
-
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No iF lows changed"
-            exit 0
-          fi
-
-          echo "$CHANGED_FILES"
-
       - name: Check Secrets Exist
         run: |
           [ -n "${{ secrets.CLIENT_ID }}" ] && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
           [ -n "${{ secrets.CLIENT_SECRET }}" ] && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
           [ -n "${{ secrets.TOKEN_URL }}" ] && echo "TOKEN_URL OK" || echo "TOKEN_URL MISSING"
 
-      - name: Get SAP Access Token
+      - name: Check Secret Lengths
         run: |
-          response=$(curl -s \
-            -X POST "${{ secrets.TOKEN_URL }}" \
-            -u "${{ secrets.CLIENT_ID }}:${{ secrets.CLIENT_SECRET }}" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "grant_type=client_credentials")
-
-          echo "$response"
-
-          if echo "$response" | grep -q "access_token"; then
-            echo "SUCCESS - SAP token received"
-          else
-            echo "FAILED - Unable to get SAP token"
-            exit 1
-          fi
-
-      - name: Simulate Deployment
-        run: |
-          echo "Deploying changed artifacts"
+          echo "CLIENT_ID length: $(echo -n '${{ secrets.CLIENT_ID }}' | wc -c)"
+          echo "CLIENT_SECRET length: $(echo -n '${{ secrets.CLIENT_SECRET }}' | wc -c)"
+          echo "TOKEN_URL length: $(echo -n '${{ secrets.TOKEN_URL }}' | wc -c)"
