@@ -1,13 +1,35 @@
 name: DEV Deployment
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - DEV
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Find Changed iFlows
+        run: |
+          echo "================================"
+          echo "Changed iFlows in this deployment"
+          echo "================================"
+
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.iflw$' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No iFlows changed"
+            exit 0
+          fi
+
+          echo "$CHANGED_FILES"
 
       - name: Check Secrets Exist
         run: |
@@ -45,3 +67,7 @@ jobs:
             echo "FAILED - Unable to get SAP token"
             exit 1
           fi
+
+      - name: Simulate Deployment
+        run: |
+          echo "Deploying changed artifacts"
