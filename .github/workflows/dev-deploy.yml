@@ -25,7 +25,7 @@ jobs:
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.iflw$' || true)
 
           if [ -z "$CHANGED_FILES" ]; then
-            echo "No iFlows changed"
+            echo "No iF lows changed"
             exit 0
           fi
 
