@@ -33,9 +33,23 @@ jobs:
 
       - name: Check Secrets Exist
         run: |
-          [ -n "${{ secrets.IS_CLIENT_ID }}" ] && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
-          [ -n "${{ secrets.IS_CLIENT_SECRET }}" ] && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
-          [ -n "${{ secrets.IS_TOKEN_URL }}" ] && echo "TOKEN_URL OK" || echo "TOKEN_URL MISSING"
+          if [ -n "${{ secrets.IS_CLIENT_ID }}" ]; then
+            echo "CLIENT_ID OK"
+          else
+            echo "CLIENT_ID MISSING"
+          fi
+
+          if [ -n "${{ secrets.IS_CLIENT_SECRET }}" ]; then
+            echo "CLIENT_SECRET OK"
+          else
+            echo "CLIENT_SECRET MISSING"
+          fi
+
+          if [ -n "${{ secrets.IS_TOKEN_URL }}" ]; then
+            echo "TOKEN_URL OK"
+          else
+            echo "TOKEN_URL MISSING"
+          fi
 
       - name: Get SAP Access Token
         run: |
