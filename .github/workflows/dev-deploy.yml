@@ -1,6 +1,7 @@
 name: DEV Deployment
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - DEV
@@ -18,7 +19,6 @@ jobs:
 
       - name: Find Changed iFlows
         run: |
-
           echo "================================"
           echo "Changed iFlows in this deployment"
           echo "================================"
@@ -27,10 +27,15 @@ jobs:
 
           if [ -z "$CHANGED_FILES" ]; then
             echo "No iFlows changed"
-            exit 0
+          else
+            echo "$CHANGED_FILES"
           fi
 
-          echo "$CHANGED_FILES"
+      - name: Check Secrets Exist
+        run: |
+          [ -n "${{ secrets.IS_CLIENT_ID }}" ] && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
+          [ -n "${{ secrets.IS_CLIENT_SECRET }}" ] && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
+          [ -n "${{ secrets.IS_TOKEN_URL }}" ] && echo "TOKEN_URL OK" || echo "TOKEN_URL MISSING"
 
       - name: Get SAP Access Token
         run: |
