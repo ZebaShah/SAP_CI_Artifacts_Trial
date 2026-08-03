@@ -65,7 +65,7 @@ jobs:
             echo "SUCCESS - SAP token received"
           else
             echo "FAILED - Unable to get SAP token"
-            exit 1
+            exit 1 
           fi
 
       - name: Simulate Deployment
