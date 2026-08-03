@@ -32,6 +32,23 @@ jobs:
 
           echo "$CHANGED_FILES"
 
+      - name: Get SAP Access Token
+        run: |
+          response=$(curl -s --request POST "${{ secrets.IS_TOKEN_URL }}" \
+            --header "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "grant_type=client_credentials" \
+            --data-urlencode "client_id=${{ secrets.IS_CLIENT_ID }}" \
+            --data-urlencode "client_secret=${{ secrets.IS_CLIENT_SECRET }}")
+
+          echo "$response"
+
+          if echo "$response" | grep -q "access_token"; then
+            echo "SUCCESS - SAP token received"
+          else
+            echo "FAILED - Unable to get SAP token"
+            exit 1
+          fi
+
       - name: Simulate Deployment
         run: |
-          echo "Deploying changed artifacts..."
+          echo "Deploying changed artifacts"
