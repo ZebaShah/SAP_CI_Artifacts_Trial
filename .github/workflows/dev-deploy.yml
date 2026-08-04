@@ -1,31 +1,20 @@
-name: DEV Deployment
+name: SAP Cloud Integration Deploy IFlow Test
 
 on:
   push:
     branches:
       - DEV
- 
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Get SAP Access Token
-        run: |
-          AUTH=$(printf "%s:%s" "${{ secrets.CLIENT_ID }}" "${{ secrets.CLIENT_SECRET }}" | base64 -w 0)
-
-          response=$(curl -s \
-            -X POST "${{ secrets.TOKEN_URL }}" \
-            -H "Authorization: Basic $AUTH" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "grant_type=client_credentials")
-
-          echo "$response"
-
-          if echo "$response" | grep -q "access_token"; then
-            echo "SUCCESS - SAP token received"
-          else
-            echo "FAILED - Unable to get SAP token"
-            exit 1
-          fi
+      - name: integrationArtifactDeploy
+        uses: SAP/project-piper-action@main
+        with:
+          step-name: integrationArtifactDeploy
+          flags: --apiServiceKey '${{ secrets.CPIAPISERVICEKEYCREDENTIALSID }}'
