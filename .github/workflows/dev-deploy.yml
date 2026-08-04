@@ -1,20 +1,17 @@
-name: SAP Cloud Integration Deploy IFlow Test
+name: SAP Cloud Integration deploy IFlow Test
 
 on:
   push:
     branches:
       - DEV
 
-jobs: 
+jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: integrationArtifactDeploy
-        uses: SAP/project-piper-action@main
+        uses: SAP/project-piper-action@v1.27.0
         with:
           step-name: integrationArtifactDeploy
-          flags: --apiServiceKey '${{ secrets.CPIAPISERVICEKEYCREDENTIALSID }}'
+          flags: --apiServiceKey ${{ secrets.CPIAPISERVICEKEYCREDENTIALSID }} --integrationFlowId PurchaseOrderHandlerDemo
