@@ -1,0 +1,59 @@
+name: Inspect Changed IFlow Structure
+
+on:
+  push:
+    branches:
+      - DEV
+
+jobs:
+  inspect-iflow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Find Changed IFlows
+        run: |
+          echo "================================"
+          echo "Changed iFlows"
+          echo "================================"
+
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.iflw$' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No iFlows changed"
+            exit 0
+          fi
+
+          echo "$CHANGED_FILES"
+
+          echo "$CHANGED_FILES" > changed-iflows.txt
+
+      - name: Inspect Changed IFlow Structure
+        run: |
+          echo "================================"
+          echo "Artifact Structure"
+          echo "================================"
+
+          while read file
+          do
+            echo ""
+            echo "FILE:"
+            echo "$file"
+
+            echo ""
+            echo "PARENT DIRECTORY:"
+            dirname "$file"
+
+            echo ""
+            echo "FILES IN SAME DIRECTORY:"
+            find "$(dirname "$file")" -type f
+
+            echo ""
+            echo "FIRST 30 LINES:"
+            head -30 "$file"
+
+          done < changed-iflows.txt
