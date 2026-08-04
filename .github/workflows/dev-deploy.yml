@@ -1,17 +1,113 @@
-name: SAP Cloud Integration deploy IFlow Test 
+name: SAP CPI API Connectivity Test Without Piper
 
 on:
   push:
-    branches: 
+    branches:
       - DEV
- 
+
 jobs:
-  build:
+  cpi-connectivity-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: integrationArtifactDeploy
-        uses: SAP/project-piper-action@v1.27.0
-        with:
-          step-name: integrationArtifactDeploy
-          flags: --apiServiceKey ${{ secrets.CPIAPISERVICEKEYCREDENTIALSID }} --integrationFlowId PurchaseOrderHandlerDemo
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Read CPI Service Key
+        env:
+          CPI_SERVICE_KEY: ${{ secrets.CPIAPISERVICEKEYCREDENTIALSID }}
+        run: |
+          echo "Writing CPI service key to file"
+
+          printf '%s' "$CPI_SERVICE_KEY" > cpi-service-key.json
+
+          echo "Validating CPI service key JSON"
+
+          if jq empty cpi-service-key.json; then
+            echo "CPI service key JSON is valid"
+          else
+            echo "CPI service key JSON is invalid"
+            exit 1
+          fi
+
+      - name: Extract CPI Service Key Values
+        run: |
+          CLIENT_ID=$(jq -r '.oauth.clientid' cpi-service-key.json)
+          CLIENT_SECRET=$(jq -r '.oauth.clientsecret' cpi-service-key.json)
+          TOKEN_URL=$(jq -r '.oauth.tokenurl' cpi-service-key.json)
+          CPI_URL=$(jq -r '.oauth.url' cpi-service-key.json)
+
+          if [ -z "$CLIENT_ID" ] || [ "$CLIENT_ID" = "null" ]; then
+            echo "clientid missing from service key"
+            exit 1
+          fi
+
+          if [ -z "$CLIENT_SECRET" ] || [ "$CLIENT_SECRET" = "null" ]; then
+            echo "clientsecret missing from service key"
+            exit 1
+          fi
+
+          if [ -z "$TOKEN_URL" ] || [ "$TOKEN_URL" = "null" ]; then
+            echo "tokenurl missing from service key"
+            exit 1
+          fi
+
+          if [ -z "$CPI_URL" ] || [ "$CPI_URL" = "null" ]; then
+            echo "url missing from service key"
+            exit 1
+          fi
+
+          echo "CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+          echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+          echo "TOKEN_URL=$TOKEN_URL" >> $GITHUB_ENV
+          echo "CPI_URL=$CPI_URL" >> $GITHUB_ENV
+
+          echo "CPI service key values extracted successfully"
+
+      - name: Get SAP CPI OAuth Token
+        run: |
+          echo "Requesting OAuth token from SAP CPI"
+
+          TOKEN_RESPONSE=$(curl -sS -X POST "$TOKEN_URL?grant_type=client_credentials" \
+            -u "$CLIENT_ID:$CLIENT_SECRET" \
+            -H "Content-Type: application/x-www-form-urlencoded")
+
+          if echo "$TOKEN_RESPONSE" | jq empty; then
+            echo "Token response is valid JSON"
+          else
+            echo "Token response is not valid JSON"
+            echo "$TOKEN_RESPONSE"
+            exit 1
+          fi
+
+          ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+
+          if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
+            echo "Failed to retrieve SAP CPI access token"
+            echo "$TOKEN_RESPONSE"
+            exit 1
+          fi
+
+          echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+          echo "SAP CPI OAuth token received successfully"
+
+      - name: Call SAP CPI API
+        run: |
+          echo "Calling SAP CPI IntegrationPackages API"
+
+          HTTP_STATUS=$(curl -sS -o cpi-response.json -w "%{http_code}" \
+            -X GET "$CPI_URL/api/v1/IntegrationPackages" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Accept: application/json")
+
+          echo "HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "SAP CPI API is reachable from GitHub"
+            echo "Integration package count:"
+            jq '.d.results | length' cpi-response.json
+          else
+            echo "SAP CPI API call failed"
+            cat cpi-response.json
+            exit 1
+          fi
