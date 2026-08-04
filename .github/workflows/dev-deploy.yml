@@ -11,19 +11,21 @@ jobs:
 
     steps:
 
-      - name: Check Secret Lengths
+      - name: Get SAP Access Token
         run: |
-          echo "CLIENT_ID length: $(printf '%s' '${{ secrets.CLIENT_ID }}' | wc -c)"
-          echo "CLIENT_SECRET length: $(printf '%s' '${{ secrets.CLIENT_SECRET }}' | wc -c)"
-          echo "TOKEN_URL length: $(printf '%s' '${{ secrets.TOKEN_URL }}' | wc -c)"
+          AUTH=$(printf "%s:%s" "${{ secrets.CLIENT_ID }}" "${{ secrets.CLIENT_SECRET }}" | base64 -w 0)
 
-      - name: Check For Hidden Characters
-        run: |
-          echo "CLIENT_ID"
-          printf '%s' '${{ secrets.CLIENT_ID }}' | od -An -tx1 | tail -1
+          response=$(curl -s \
+            -X POST "${{ secrets.TOKEN_URL }}" \
+            -H "Authorization: Basic $AUTH" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "grant_type=client_credentials")
 
-          echo "CLIENT_SECRET"
-          printf '%s' '${{ secrets.CLIENT_SECRET }}' | od -An -tx1 | tail -1
+          echo "$response"
 
-          echo "TOKEN_URL"
-          printf '%s' '${{ secrets.TOKEN_URL }}' | od -An -tx1 | tail -1
+          if echo "$response" | grep -q "access_token"; then
+            echo "SUCCESS - SAP token received"
+          else
+            echo "FAILED - Unable to get SAP token"
+            exit 1
+          fi
