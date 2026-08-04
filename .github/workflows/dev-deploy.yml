@@ -1,4 +1,4 @@
-name: CPI Package Discovery
+name: List IFlows In Package
 
 on:
   push:
@@ -6,8 +6,11 @@ on:
       - DEV
 
 jobs:
-  discover-packages:
+  list-iflows:
     runs-on: ubuntu-latest
+
+    env:
+      PACKAGE_ID: "Test1"
 
     steps:
       - name: Checkout Repository
@@ -43,13 +46,15 @@ jobs:
 
           echo "ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
 
-      - name: List CPI Packages
+      - name: List IFlows In Test1
         run: |
+          echo "Package: $PACKAGE_ID"
+
           curl -sS \
-            -X GET "$CPI_URL/api/v1/IntegrationPackages" \
+            -X GET "$CPI_URL/api/v1/IntegrationPackages('$PACKAGE_ID')/IntegrationDesigntimeArtifacts" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Accept: application/json" > packages.json
+            -H "Accept: application/json" > iflows.json
 
-          echo "======= PACKAGE IDS ======="
+          echo "======= IFLOWS ======="
 
-          jq -r '.d.results[] | "\(.Id) | \(.Name)"' packages.json
+          jq -r '.d.results[] | "\(.Id) | \(.Name)"' iflows.json
