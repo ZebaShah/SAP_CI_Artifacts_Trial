@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      IFLOW_ID: "IFLOW_github_test1"
+      IFLOW_ID: "IFLOW_github_test1_COPY"
       TARGET_PACKAGE: "Test2"
 
     steps:
@@ -97,6 +97,8 @@ jobs:
             "ArtifactContent": "${ARTIFACT_CONTENT}"
           }
           EOF
+
+          echo "Payload created"
 
       - name: Create Artifact In Test2
         run: |
