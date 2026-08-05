@@ -41,6 +41,7 @@ jobs:
 
           if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
             echo "OAuth failed"
+            echo "$TOKEN_RESPONSE"
             exit 1
           fi
 
@@ -58,6 +59,12 @@ jobs:
 
           TOKEN=$(grep -i x-csrf-token headers.txt | awk '{print $2}' | tr -d '\r')
 
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to retrieve CSRF token"
+            cat headers.txt
+            exit 1
+          fi
+
           echo "CSRF_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: Zip GitHub Artifact
@@ -65,14 +72,11 @@ jobs:
           zip -r iflow.zip IFLOW_github_test1
 
           echo "ZIP created"
-
           ls -lah iflow.zip
 
       - name: Base64 Encode Artifact
         run: |
           base64 -w 0 iflow.zip > artifact.b64
-
-          echo "BASE64_LENGTH=$(wc -c < artifact.b64)" >> $GITHUB_ENV
 
       - name: Create Payload
         run: |
@@ -89,13 +93,29 @@ jobs:
 
           echo "Payload created"
 
+          echo "Payload size:"
+          wc -c payload.json
+
       - name: Create Artifact In Test2
         run: |
-          curl -sS \
+          HTTP_STATUS=$(curl -sS \
             -b cookies.txt \
+            -o response.txt \
+            -w "%{http_code}" \
             -X POST "$CPI_URL/api/v1/IntegrationDesigntimeArtifacts" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "X-CSRF-Token: $CSRF_TOKEN" \
             -H "Content-Type: application/json" \
-            -d @payload.json \
-            | jq .
+            -d @payload.json)
+
+          echo "================================"
+          echo "HTTP STATUS"
+          echo "================================"
+          echo "$HTTP_STATUS"
+
+          echo ""
+          echo "================================"
+          echo "RAW RESPONSE"
+          echo "================================"
+
+          cat response.txt
