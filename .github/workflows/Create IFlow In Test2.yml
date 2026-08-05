@@ -2,7 +2,7 @@ name: Create IFlow In Test2
 
 on:
   push:
-    branches:
+    branches: 
       - DEV
 
 jobs:
