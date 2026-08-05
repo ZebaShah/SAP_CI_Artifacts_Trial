@@ -2,7 +2,7 @@ name: Create IFlow In Test2
 
 on:
   push:
-    branches: 
+    branches:
       - DEV
 
 jobs:
@@ -67,12 +67,19 @@ jobs:
 
           echo "CSRF_TOKEN=$TOKEN" >> $GITHUB_ENV
 
-      - name: Zip GitHub Artifact
+      - name: Create CPI Compatible ZIP
         run: |
-          zip -r iflow.zip IFLOW_github_test1
+          cd IFLOW_github_test1
 
-          echo "ZIP created"
-          ls -lah iflow.zip
+          zip -r ../iflow.zip .
+
+          cd ..
+
+          echo "================================"
+          echo "ZIP CONTENT"
+          echo "================================"
+
+          unzip -l iflow.zip
 
       - name: Base64 Encode Artifact
         run: |
@@ -90,11 +97,6 @@ jobs:
             "ArtifactContent": "${ARTIFACT_CONTENT}"
           }
           EOF
-
-          echo "Payload created"
-
-          echo "Payload size:"
-          wc -c payload.json
 
       - name: Create Artifact In Test2
         run: |
