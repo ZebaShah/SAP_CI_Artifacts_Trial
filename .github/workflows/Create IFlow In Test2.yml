@@ -1,4 +1,4 @@
-name: Create IFlow In Test2
+name: Create Or Update IFlow In Test2
 
 on:
   push:
@@ -6,12 +6,13 @@ on:
       - DEV
 
 jobs:
-  create-iflow:
+  create-or-update-iflow:
     runs-on: ubuntu-latest
 
     env:
       IFLOW_ID: "IFLOW_github_test1_COPY"
       TARGET_PACKAGE: "Test2"
+      IFLOW_VERSION: "1.0.0"
 
     steps:
       - name: Checkout Repository
@@ -41,7 +42,6 @@ jobs:
 
           if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
             echo "OAuth failed"
-            echo "$TOKEN_RESPONSE"
             exit 1
           fi
 
@@ -59,27 +59,13 @@ jobs:
 
           TOKEN=$(grep -i x-csrf-token headers.txt | awk '{print $2}' | tr -d '\r')
 
-          if [ -z "$TOKEN" ]; then
-            echo "Failed to retrieve CSRF token"
-            cat headers.txt
-            exit 1
-          fi
-
           echo "CSRF_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: Create CPI Compatible ZIP
         run: |
           cd IFLOW_github_test1
-
           zip -r ../iflow.zip .
-
           cd ..
-
-          echo "================================"
-          echo "ZIP CONTENT"
-          echo "================================"
-
-          unzip -l iflow.zip
 
       - name: Base64 Encode Artifact
         run: |
@@ -98,28 +84,36 @@ jobs:
           }
           EOF
 
-          echo "Payload created"
-
-      - name: Create Artifact In Test2
+      - name: Check If Artifact Exists
         run: |
-          HTTP_STATUS=$(curl -sS \
-            -b cookies.txt \
-            -o response.txt \
+          STATUS=$(curl -sS \
+            -o exists.txt \
             -w "%{http_code}" \
+            -X GET "$CPI_URL/api/v1/IntegrationDesigntimeArtifacts(Id='${IFLOW_ID}',Version='${IFLOW_VERSION}')" \
+            -H "Authorization: Bearer $ACCESS_TOKEN")
+
+          echo "ARTIFACT_STATUS=$STATUS" >> $GITHUB_ENV
+
+          echo "Artifact Status: $STATUS"
+
+      - name: Create New Artifact
+        if: env.ARTIFACT_STATUS == '404'
+        run: |
+          curl -sS \
+            -b cookies.txt \
             -X POST "$CPI_URL/api/v1/IntegrationDesigntimeArtifacts" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "X-CSRF-Token: $CSRF_TOKEN" \
             -H "Content-Type: application/json" \
-            -d @payload.json)
+            -d @payload.json
 
-          echo "================================"
-          echo "HTTP STATUS"
-          echo "================================"
-          echo "$HTTP_STATUS"
-
-          echo ""
-          echo "================================"
-          echo "RAW RESPONSE"
-          echo "================================"
-
-          cat response.txt
+      - name: Update Existing Artifact
+        if: env.ARTIFACT_STATUS == '200'
+        run: |
+          curl -sS \
+            -b cookies.txt \
+            -X PUT "$CPI_URL/api/v1/IntegrationDesigntimeArtifacts(Id='${IFLOW_ID}',Version='${IFLOW_VERSION}')" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "X-CSRF-Token: $CSRF_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @payload.json
