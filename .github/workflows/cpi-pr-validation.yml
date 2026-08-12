@@ -1,6 +1,6 @@
-name: SAP CPI PR Validation
+name: cpi-pr-validation
 
-on:
+on: 
   pull_request:
     branches:
       - DEV
