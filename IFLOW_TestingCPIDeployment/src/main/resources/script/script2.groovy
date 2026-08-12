@@ -8,10 +8,6 @@ https://help.sap.com/doc/a56f52e1a58e4e2bac7f7adbf45b2e26/Cloud/en-US/index.html
 import com.sap.gateway.ip.core.customdev.util.Message;
 
 def Message processData(Message message) {
-    def body = message.getBody(String)
-    
-message.setProperty("GitHubDeploymentTest", "SUCCESS")
-message.setBody(body)
 
     /*To set or modify the body, you can use the following methods.
     def body = message.getBody();
@@ -28,6 +24,7 @@ message.setBody(body)
     value = properties.get("oldProperty");
     message.setProperty("oldProperty", value + " modified");
     message.setProperty("newProperty", "newProperty"); */
-
+   message.setHeader("oldHeader", value + " modified");
+    message.setHeader("newHeader", "newHeader");
     return message;
 }
