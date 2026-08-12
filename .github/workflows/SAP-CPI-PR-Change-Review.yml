@@ -23,10 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Identify Changed iFlows
-        id: changed_iflows
+      - name: Analyse Changed SAP CPI Files
         run: |
-          echo "Identifying changed iFlow files in PR..."
+          echo "Analysing changed SAP CPI files in PR..."
 
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
@@ -34,74 +33,138 @@ jobs:
           echo "Base SHA: $BASE_SHA"
           echo "Head SHA: $HEAD_SHA"
 
-          CHANGED_IFLOWS=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep '\.iflw$' || true)
+          git diff --name-status "$BASE_SHA" "$HEAD_SHA" > changed-files.txt
 
-          if [ -z "$CHANGED_IFLOWS" ]; then
-            echo "No changed iFlow files found."
-            echo "has_iflow_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          echo "Changed files:"
+          cat changed-files.txt
 
-          echo "Changed iFlow files:"
-          echo "$CHANGED_IFLOWS"
+          echo ""
+          echo "Extracting changed iFlow files..."
+          awk '{print $2}' changed-files.txt | grep '\.iflw$' > changed-iflows.txt || true
 
-          echo "$CHANGED_IFLOWS" > changed-iflows.txt
-          echo "has_iflow_changes=true" >> $GITHUB_OUTPUT
+          echo ""
+          echo "Extracting changed Groovy script files..."
+          awk '{print $2}' changed-files.txt | grep -E '\.groovy$' > changed-groovy.txt || true
 
-      - name: Create iFlow Change Summary
-        if: steps.changed_iflows.outputs.has_iflow_changes == 'true'
+          echo ""
+          echo "Extracting changed CPI resource files..."
+          awk '{print $2}' changed-files.txt | grep -E 'src/main/resources' > changed-cpi-resources.txt || true
+
+      - name: Create Reviewer Summary
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
-          echo "## SAP CPI iFlow Change Review" > pr-iflow-review.md
-          echo "" >> pr-iflow-review.md
-          echo "The following iFlow files were changed in this Pull Request:" >> pr-iflow-review.md
+          echo "## SAP CPI Pull Request Change Review" > pr-iflow-review.md
           echo "" >> pr-iflow-review.md
 
-          while read file
-          do
-            IFLOW_NAME=$(basename "$file" .iflw)
-
-            echo "### Changed iFlow: \`$IFLOW_NAME\`" >> pr-iflow-review.md
-            echo "" >> pr-iflow-review.md
-            echo "**File path:** \`$file\`" >> pr-iflow-review.md
-            echo "" >> pr-iflow-review.md
-
-            if echo "$IFLOW_NAME" | grep -E '^IFLOW_' > /dev/null; then
-              echo "**Naming validation:** Passed. iFlow starts with \`IFLOW_\`." >> pr-iflow-review.md
-            else
-              echo "**Naming validation:** Failed. Expected naming convention: \`IFLOW_*\`." >> pr-iflow-review.md
-            fi
-
-            echo "" >> pr-iflow-review.md
-            echo "**Changed content preview:**" >> pr-iflow-review.md
-            echo "" >> pr-iflow-review.md
-            echo '```diff' >> pr-iflow-review.md
-
-            git diff --unified=5 "$BASE_SHA" "$HEAD_SHA" -- "$file" | head -200 >> pr-iflow-review.md
-
-            echo '```' >> pr-iflow-review.md
-            echo "" >> pr-iflow-review.md
-            echo "---" >> pr-iflow-review.md
-            echo "" >> pr-iflow-review.md
-
-          done < changed-iflows.txt
-
-          echo "iFlow change summary created."
-
-      - name: Create No iFlow Change Summary
-        if: steps.changed_iflows.outputs.has_iflow_changes == 'false'
-        run: |
-          echo "## SAP CPI iFlow Change Review" > pr-iflow-review.md
+          echo "This summary highlights SAP CPI artifact changes detected in this Pull Request." >> pr-iflow-review.md
           echo "" >> pr-iflow-review.md
-          echo "No SAP CPI iFlow \`.iflw\` files were changed in this Pull Request." >> pr-iflow-review.md
+
+          echo "### 1. Changed SAP CPI iFlows" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+
+          if [ ! -s changed-iflows.txt ]; then
+            echo "No changed \`.iflw\` files were detected in this Pull Request." >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+          else
+            while read file
+            do
+              IFLOW_NAME=$(basename "$file" .iflw)
+
+              echo "- **Changed iFlow:** \`$IFLOW_NAME\`" >> pr-iflow-review.md
+              echo "  - File path: \`$file\`" >> pr-iflow-review.md
+
+              if echo "$IFLOW_NAME" | grep -E '^IFLOW_' > /dev/null; then
+                echo "  - Naming validation: Passed. iFlow starts with \`IFLOW_\`." >> pr-iflow-review.md
+              else
+                echo "  - Naming validation: Failed. Expected naming convention: \`IFLOW_*\`." >> pr-iflow-review.md
+              fi
+
+              echo "" >> pr-iflow-review.md
+
+              echo "  - iFlow XML changed: Yes" >> pr-iflow-review.md
+
+              if git diff "$BASE_SHA" "$HEAD_SHA" -- "$file" | grep -Ei 'groovy|script|Script|resource|mapping|adapter|step|cmdVariantUri' > /dev/null; then
+                echo "  - Potential design-time changes detected in XML: script/resource/step related content found." >> pr-iflow-review.md
+              else
+                echo "  - Potential design-time changes detected in XML: no obvious script/resource keyword found in diff." >> pr-iflow-review.md
+              fi
+
+              echo "" >> pr-iflow-review.md
+
+            done < changed-iflows.txt
+          fi
+
+          echo "---" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+
+          echo "### 2. Changed Groovy Scripts" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+
+          if [ ! -s changed-groovy.txt ]; then
+            echo "No changed Groovy script files were detected in this Pull Request." >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+          else
+            while read file
+            do
+              SCRIPT_NAME=$(basename "$file")
+
+              echo "#### Groovy Script Changed: \`$SCRIPT_NAME\`" >> pr-iflow-review.md
+              echo "" >> pr-iflow-review.md
+              echo "**File path:** \`$file\`" >> pr-iflow-review.md
+              echo "" >> pr-iflow-review.md
+
+              echo "**Groovy change preview:**" >> pr-iflow-review.md
+              echo "" >> pr-iflow-review.md
+              echo '```diff' >> pr-iflow-review.md
+
+              git diff --unified=8 "$BASE_SHA" "$HEAD_SHA" -- "$file" | head -250 >> pr-iflow-review.md
+
+              echo '```' >> pr-iflow-review.md
+              echo "" >> pr-iflow-review.md
+              echo "---" >> pr-iflow-review.md
+              echo "" >> pr-iflow-review.md
+
+            done < changed-groovy.txt
+          fi
+
+          echo "### 3. Changed CPI Resource Files" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+
+          if [ ! -s changed-cpi-resources.txt ]; then
+            echo "No CPI resource files under \`src/main/resources\` were detected as changed." >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+          else
+            echo "The following CPI resource files changed:" >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+
+            while read file
+            do
+              echo "- \`$file\`" >> pr-iflow-review.md
+            done < changed-cpi-resources.txt
+
+            echo "" >> pr-iflow-review.md
+          fi
+
+          echo "---" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+
+          echo "### 4. Reviewer Guidance" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+          echo "Reviewers should check:" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+          echo "- Whether the changed iFlow is expected for this change request." >> pr-iflow-review.md
+          echo "- Whether the iFlow follows the naming standard \`IFLOW_*\`." >> pr-iflow-review.md
+          echo "- Whether any Groovy script changes are technically valid and safe." >> pr-iflow-review.md
+          echo "- Whether only the intended iFlow/resource files were changed." >> pr-iflow-review.md
+          echo "- Whether the change is ready to be merged into the protected \`DEV\` branch." >> pr-iflow-review.md
 
       - name: Add Summary To Workflow Run
         run: |
           cat pr-iflow-review.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Comment Change Summary On Pull Request
+      - name: Comment Summary On Pull Request
         uses: actions/github-script@v7
         with:
           script: |
