@@ -1,0 +1,117 @@
+name: SAP CPI PR Change Review
+
+on:
+  pull_request:
+    branches:
+      - DEV
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review-iflow-changes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Identify Changed iFlows
+        id: changed_iflows
+        run: |
+          echo "Identifying changed iFlow files in PR..."
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+
+          CHANGED_IFLOWS=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep '\.iflw$' || true)
+
+          if [ -z "$CHANGED_IFLOWS" ]; then
+            echo "No changed iFlow files found."
+            echo "has_iflow_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed iFlow files:"
+          echo "$CHANGED_IFLOWS"
+
+          echo "$CHANGED_IFLOWS" > changed-iflows.txt
+          echo "has_iflow_changes=true" >> $GITHUB_OUTPUT
+
+      - name: Create iFlow Change Summary
+        if: steps.changed_iflows.outputs.has_iflow_changes == 'true'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "## SAP CPI iFlow Change Review" > pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+          echo "The following iFlow files were changed in this Pull Request:" >> pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+
+          while read file
+          do
+            IFLOW_NAME=$(basename "$file" .iflw)
+
+            echo "### Changed iFlow: \`$IFLOW_NAME\`" >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+            echo "**File path:** \`$file\`" >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+
+            if echo "$IFLOW_NAME" | grep -E '^IFLOW_' > /dev/null; then
+              echo "**Naming validation:** Passed. iFlow starts with \`IFLOW_\`." >> pr-iflow-review.md
+            else
+              echo "**Naming validation:** Failed. Expected naming convention: \`IFLOW_*\`." >> pr-iflow-review.md
+            fi
+
+            echo "" >> pr-iflow-review.md
+            echo "**Changed content preview:**" >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+            echo '```diff' >> pr-iflow-review.md
+
+            git diff --unified=5 "$BASE_SHA" "$HEAD_SHA" -- "$file" | head -200 >> pr-iflow-review.md
+
+            echo '```' >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+            echo "---" >> pr-iflow-review.md
+            echo "" >> pr-iflow-review.md
+
+          done < changed-iflows.txt
+
+          echo "iFlow change summary created."
+
+      - name: Create No iFlow Change Summary
+        if: steps.changed_iflows.outputs.has_iflow_changes == 'false'
+        run: |
+          echo "## SAP CPI iFlow Change Review" > pr-iflow-review.md
+          echo "" >> pr-iflow-review.md
+          echo "No SAP CPI iFlow \`.iflw\` files were changed in this Pull Request." >> pr-iflow-review.md
+
+      - name: Add Summary To Workflow Run
+        run: |
+          cat pr-iflow-review.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment Change Summary On Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const body = fs.readFileSync('pr-iflow-review.md', 'utf8');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
